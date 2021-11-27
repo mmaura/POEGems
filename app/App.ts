@@ -3,113 +3,148 @@ import POEWikiApi from './POEWikiApi'
 import * as fs from 'fs'
 import * as path from 'path'
 
+interface IGems {
+  name: string,
+  required_level: number
+  html?: string,
+  price?: string,
+  price_amount?: number,
+  vendor_rewards?: VendorReward[],
+  quest_rewards?: QuestReward[],
+  alternative_quality: string[]
+}
+enum AltQual {
+  Divergent = "Divergent",
+  Anomalous = "Anomalous",
+  Phantasmal = "Phantasmal"
+}
+
+interface VendorReward {
+  npc: string,
+  quest: string,
+  act: number,
+  classes: string[]
+}
+interface QuestReward {
+  npc: string,
+  quest: string,
+  act: number,
+  classes: string[]
+}
+
 class App {
-  gems: Array<any> = []
+  gems: IGems[] = []
 
   async run() {
     console.log('Running')
 
-    this.gems = [
-      ...await this.processGemsVendorChunk(POEWikiApi.GEMS_ACTIVE_VENDOR_API_TEMP, 400, 0),
-      ...await this.processGemsVendorChunk(POEWikiApi.GEMS_ACTIVE_VENDOR_API_TEMP, 500, 400),
-      ...await this.processGemsVendorChunk(POEWikiApi.GEMS_SUPPORT_VENDOR_API_TEMP, 500, 0),
-      ...await this.processGemsVendorChunk(POEWikiApi.GEMS_SUPPORT_VENDOR_API_TEMP, 500, 500)
-    ]
+    Promise.all([
+      this.processGemsBaseChunk(POEWikiApi.GEMS_ACTIVE_BASE_TEMP, 400, 0),
+      this.processGemsBaseChunk(POEWikiApi.GEMS_ACTIVE_BASE_TEMP, 500, 400),
+      this.processGemsBaseChunk(POEWikiApi.GEMS_SUPPORT_BASE_TEMP, 400, 400),
+      this.processGemsBaseChunk(POEWikiApi.GEMS_SUPPORT_BASE_TEMP, 500, 0),
+    ])
+      .then(() => {
+        Promise.all([
+          this.processGemsVendorChunk(POEWikiApi.GEMS_ACTIVE_VENDOR_API_TEMP, 400, 0),
+          this.processGemsVendorChunk(POEWikiApi.GEMS_ACTIVE_VENDOR_API_TEMP, 500, 400),
+          this.processGemsVendorChunk(POEWikiApi.GEMS_SUPPORT_VENDOR_API_TEMP, 500, 0),
+          this.processGemsVendorChunk(POEWikiApi.GEMS_SUPPORT_VENDOR_API_TEMP, 500, 500),
 
-    await this.processGemsQuestChunk(POEWikiApi.GEMS_ACTIVE_QUEST_API_TEMP, 500, 0)
-    await this.processGemsQuestChunk(POEWikiApi.GEMS_SUPPORT_QUEST_API_TEMP, 500, 0)
-    /** @TODO Process quest rewards */
+          this.processGemsQuestChunk(POEWikiApi.GEMS_ACTIVE_QUEST_API_TEMP, 500, 0),
+          this.processGemsQuestChunk(POEWikiApi.GEMS_SUPPORT_QUEST_API_TEMP, 500, 0),
+        ])
+          .then(() => {
+            this.assertNoDuplicates()
+              .then((result) => {
+                if (result) {
+                  fs.writeFileSync(path.join(__dirname, '../dist', 'gems.json'), JSON.stringify(this.gems, null, 2))
+                  console.log('\n\n' + this.gems.length + ' gems processed and written to file')
+                }
+              })
+          })
 
-    if (await this.assertNoDuplicates()) {
-      fs.writeFileSync(path.join(__dirname, '../dist', 'gems.json'), JSON.stringify({ gems: this.gems }, null, 2))
-
-      console.log('\n\n' + this.gems.length + ' gems processed and written to file')
-    }
-
-
+      })
   }
 
-  /**
-   * Gets chunk of data from the API
-   * 
-   * @param limit 
-   * @param offset 
-   */
-  async processGemsVendorChunk(api: String, limit: Number, offset: Number): Promise<Array<any>> {
-    console.log('Calling API for gems with vendor rewards chunk of data')
+  async processGemsBaseChunk(api: String, limit: Number, offset: Number): Promise<void> {
+    console.log('Calling API for gems BASE chunk of data')
     let response = await axios.get(POEWikiApi.getChunkAPI(api, limit, offset))
-    console.log(POEWikiApi.getChunkAPI(api, limit, offset))
-    console.log(response)
     let data = response.data.cargoquery
-    let gems = []
 
-    console.log('Processing the chunk')
     // Itterate through all the returned gems
-    data.forEach(gemData => {
+    data.forEach((gemData, index) => {
       // Check if the gem was alredy added to the `gems` object
-      let gem = gemData.title
-      let existingGem = gems.find(g => g.name === gem.name)
+      let gem = gemData.title as IGems
 
-      if (existingGem) {
-        // If the gem is already in `gems` push new vendor reward to it
-        existingGem.vendor_rewards.push({
-          npc: gem.npc,
-          quest: gem.quest,
-          act: gem.act,
-          classes: ((gem.classes) && gem.classes.length > 0) ? gem.classes.split('�') : []
-        })
-      } else {
+      if (this.gems.find(g => g.name === gem.name))
+        console.log(`** BaseGems ** double gem ${gem.name} , index ${index}`)
+      else {
+        var altQ = [] as string[]
+
+        if (gem.html.search(/Divergent/) !== -1) altQ.push("Divergent")
+        if (gem.html.search(/Anomalous/) !== -1) altQ.push("Anomalous")
+        if (gem.html.search(/Phantasmal/) !== -1) altQ.push("Phantasmal")
         // If it's a new gem, create an entry in `gems` object for it
-        gems.push({
+        this.gems.push({
           name: gem.name,
+          alternative_quality: altQ,
           required_level: gem['required level'],
-          primary_attr: gem['primary attribute'],
-          vendor_rewards: [{
-            npc: gem.npc,
-            quest: gem.quest,
-            act: gem.act,
-            classes: ((gem.classes) && gem.classes.length > 0) ? gem.classes.split('�') : []
-          }],
-          quest_rewards: []
+          // html: gem['html'],
+          price_amount: gem['price_amount'],
+          price: gem['price'],
+          vendor_rewards: [],
+          quest_rewards: [],
         })
       }
     })
-
-    return gems
   }
 
-  /**
-   * Enriching the gems with the quest reward data
-   * 
-   * @param api 
-   * @param limit 
-   * @param offset 
-   */
-  async processGemsQuestChunk(api: String, limit: Number, offset: Number) {
-    console.log('Calling API for gems with quest rewards chunk of data')
+
+  async processGemsVendorChunk(api: String, limit: Number, offset: Number): Promise<void> {
+    console.log('Calling API for gems with VENDOR rewards chunk of data')
     let response = await axios.get(POEWikiApi.getChunkAPI(api, limit, offset))
     let data = response.data.cargoquery
 
-    console.log('Enriching the gems objects')
+    console.log(`Enriching the gems objects with ${data.length} Vendor`)
     data.forEach(gemData => {
       let gem = gemData.title
       let existingGem = this.gems.find(g => g.name === gem.name)
 
       if (!existingGem) {
-        throw new Error('Something gone really wrong, the gems from API seems to not be synchoronized!')
+        throw new Error(`** VendorGems ** impossible new gem ${gem.name}`)
       }
 
-      if (
-        ((gem.quest) && gem.quest.length > 0)
-        || ((gem.quest) && gem.act.length > 0)
-        || ((gem.quest) && gem.classes.length > 0)
-      ) {
+      if (gem.npc && gem.npc !== "")
+        existingGem.vendor_rewards.push({
+          npc: gem.npc,
+          quest: gem.quest,
+          act: Number(gem.act),
+          classes: ((gem.classes) && gem.classes.length > 0) ? gem.classes.split(',') : []
+        })
+    })
+  }
+
+  async processGemsQuestChunk(api: String, limit: Number, offset: Number): Promise<void> {
+    console.log('Calling API for gems with QUEST rewards chunk of data')
+    let response = await axios.get(POEWikiApi.getChunkAPI(api, limit, offset))
+    let data = response.data.cargoquery
+
+    console.log(`Enriching the gems objects with ${data.length} Quest`)
+    data.forEach(gemData => {
+      let gem = gemData.title
+      let existingGem = this.gems.find(g => g.name === gem.name)
+
+      if (!existingGem) {
+        throw new Error(`** QuestGems ** impossible new gem ${gem.name}`)
+      }
+      if (gem.quest && gem.quest !== "")
         existingGem.quest_rewards.push({
           quest: gem.quest,
-          act: gem.act,
-          classes: gem.classes.length > 0 ? gem.classes.split('�') : []
+          act: Number(gem.act),
+          npc: gem.npc,
+          classes: ((gem.classes) && gem.classes.length > 0) ? gem.classes.split(',') : []
         })
-      }
     })
   }
 
