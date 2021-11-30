@@ -7,11 +7,12 @@ interface IGems {
   name: string,
   required_level: number
   html?: string,
-  price?: string,
-  price_amount?: number,
+  currency?: string,
+  currency_amount?: number,
   vendor_rewards?: VendorReward[],
   quest_rewards?: QuestReward[],
-  alternative_quality: string[]
+  alternative_quality: string[],
+  is_socket: boolean
 }
 enum AltQual {
   Divergent = "Divergent",
@@ -37,6 +38,9 @@ class App {
 
   async run() {
     console.log('Running')
+
+    await this.processSockets()
+
 
     Promise.all([
       this.processGemsBaseChunk(POEWikiApi.GEMS_ACTIVE_BASE_TEMP, 400, 0),
@@ -89,17 +93,31 @@ class App {
         this.gems.push({
           name: gem.name,
           alternative_quality: altQ,
-          required_level: gem['required level'],
+          required_level: Number(gem['required level']),
           // html: gem['html'],
-          price_amount: gem['price_amount'],
-          price: gem['price'],
+          currency_amount: Number(gem['price_amount']),
+          currency: gem['currency'],
           vendor_rewards: [],
           quest_rewards: [],
+          is_socket: false
         })
       }
     })
   }
 
+
+  async processSockets(): Promise<void> {
+    for (const name of ["Green Socket", "Red Socket", "Blue Socket", "White Socket"]) {
+      this.gems.push({
+        name: name,
+        alternative_quality: [],
+        required_level: 0,
+        currency: "",
+        currency_amount: 0,
+        is_socket: true
+      })
+    }
+  }
 
   async processGemsVendorChunk(api: String, limit: Number, offset: Number): Promise<void> {
     console.log('Calling API for gems with VENDOR rewards chunk of data')
