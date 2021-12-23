@@ -5,7 +5,9 @@
     "required_level": 0,
     "currency": "",
     "currency_amount": 0,
-    "is_socket": true
+    "is_socket": true,
+    "vendor_rewards": [],
+    "quest_rewards": []
   },
   {
     "name": "Red Socket",
@@ -13,7 +15,9 @@
     "required_level": 0,
     "currency": "",
     "currency_amount": 0,
-    "is_socket": true
+    "is_socket": true,
+    "vendor_rewards": [],
+    "quest_rewards": []
   },
   {
     "name": "Blue Socket",
@@ -21,7 +25,9 @@
     "required_level": 0,
     "currency": "",
     "currency_amount": 0,
-    "is_socket": true
+    "is_socket": true,
+    "vendor_rewards": [],
+    "quest_rewards": []
   },
   {
     "name": "White Socket",
@@ -29,7 +35,9 @@
     "required_level": 0,
     "currency": "",
     "currency_amount": 0,
-    "is_socket": true
+    "is_socket": true,
+    "vendor_rewards": [],
+    "quest_rewards": []
   },
   {
     "name": "Added Chaos Damage Support",
@@ -12463,15 +12471,15 @@
     "currency": "Orb of Transmutation",
     "vendor_rewards": [
       {
-        "npc": "Lilly Roth",
-        "quest": "Fallen from Grace",
-        "act": 6,
-        "classes": []
-      },
-      {
         "npc": "Siosa",
         "quest": "A Fixture of Fate",
         "act": 3,
+        "classes": []
+      },
+      {
+        "npc": "Lilly Roth",
+        "quest": "Fallen from Grace",
+        "act": 6,
         "classes": []
       }
     ],

@@ -7,10 +7,10 @@ interface IGems {
   name: string,
   required_level: number
   html?: string,
-  currency?: string,
-  currency_amount?: number,
-  vendor_rewards?: VendorReward[],
-  quest_rewards?: QuestReward[],
+  currency: string,
+  currency_amount: number,
+  vendor_rewards: VendorReward[],
+  quest_rewards: QuestReward[],
   alternative_quality: string[],
   is_socket: boolean
 }
@@ -114,8 +114,10 @@ class App {
         required_level: 0,
         currency: "",
         currency_amount: 0,
-        is_socket: true
-      })
+        is_socket: true,
+        vendor_rewards: [],
+        quest_rewards: [],
+    })
     }
   }
 
