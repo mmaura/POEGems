@@ -23,13 +23,13 @@ enum AltQual {
 interface VendorReward {
   npc: string,
   quest: string,
-  act: number,
+  actId: number,
   classes: string[]
 }
 interface QuestReward {
   npc: string,
   quest: string,
-  act: number,
+  actId: number,
   classes: string[]
 }
 
@@ -139,7 +139,7 @@ class App {
         existingGem.vendor_rewards.push({
           npc: gem.npc,
           quest: gem.quest,
-          act: Number(gem.act),
+          actId: Number(gem.act),
           classes: ((gem.classes) && gem.classes.length > 0) ? gem.classes.split(',') : []
         })
     })
@@ -161,7 +161,7 @@ class App {
       if (gem.quest && gem.quest !== "")
         existingGem.quest_rewards.push({
           quest: gem.quest,
-          act: Number(gem.act),
+          actId: Number(gem.act),
           npc: gem.npc,
           classes: ((gem.classes) && gem.classes.length > 0) ? gem.classes.split(',') : []
         })
